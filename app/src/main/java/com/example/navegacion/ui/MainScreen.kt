@@ -1,4 +1,5 @@
 package com.example.navegacion.ui
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -74,6 +75,9 @@ fun Navigation() {
         composable("listar-contactos") {
             ListContactScreen(navController, contactos)
         }
+        composable("acerca-de") {
+            AcercaDe(navController)
+        }
     }
 }
 
@@ -109,6 +113,12 @@ fun MainMenu(navController: NavHostController) {
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Lista de contactos")
+        }
+        Button(
+            onClick = { navController.navigate("acerca-de") },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Acerca de")
         }
     }
 }
@@ -158,11 +168,22 @@ fun AddContactScreen(navController: NavHostController, contactos: MutableList<Co
 @Composable
 fun SearchContactScreen(navController: NavHostController, contactos: MutableList<Contact>) {
     var consulta by remember { mutableStateOf("") }
-    val contactosFiltrados = remember(consulta, contactos) {
-        if (consulta.isBlank()) {
+    var telefono by remember { mutableStateOf("") }
+    val contactosFiltrados = remember(consulta, telefono, contactos) {
+        if (consulta.isBlank() && telefono.isBlank()) {
             contactos
-        } else contactos.filter {
+
+        } else if (telefono.isBlank()) contactos.filter {
             it.name.contains(consulta, ignoreCase = true)
+
+        } else if (consulta.isBlank()) contactos.filter {
+            it.phone.contains(telefono, ignoreCase = true)
+
+        } else contactos.filter {
+            it.phone.contains(telefono, ignoreCase = true) && it.name.contains(
+                consulta,
+                ignoreCase = true
+            )
         }
     }
     Column(
@@ -176,6 +197,13 @@ fun SearchContactScreen(navController: NavHostController, contactos: MutableList
             value = consulta,
             onValueChange = { consulta = it },
             label = { Text("Buscar contacto") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        OutlinedTextField(
+            value = telefono,
+            onValueChange = { telefono = it },
+            label = { Text("Buscar numero de telefono") },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -247,6 +275,26 @@ fun DeleteContactScreen(navController: NavHostController, contactos: MutableList
 }
 
 @Composable
+fun AcercaDe(navController: NavHostController) {
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Hecho por Starbucks.net"
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = { navController.popBackStack() }) {
+            Text("Volver")
+        }
+    }
+}
+
+@Composable
 fun ShowDeleteItem(contact: Contact, onDelete: (Contact) -> Unit) {
     Row(
         modifier = Modifier
@@ -274,14 +322,15 @@ fun ListContactScreen(navController: NavHostController, contactos: MutableList<C
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        if(contactos.isEmpty()) {
+        if (contactos.isEmpty()) {
             Text("No se encontraron contactos.")
         } else {
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth()) {
+                    .fillMaxWidth()
+            ) {
                 items(items = contactos) { contacto ->
                     ContactItemCard(
                         contact = contacto,
