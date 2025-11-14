@@ -20,7 +20,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableIntState
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.asIntState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,6 +39,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.navegacion.data.Contact
 import com.example.navegacion.ui.theme.NavegacionTheme
+import kotlin.reflect.KProperty
 
 //https://developer.android.com/codelabs/basic-android-kotlin-compose-navigation#0
 //https://developer.android.com/develop/ui/compose/navigation
@@ -48,6 +53,7 @@ fun MainScreen() {
 
 @Composable
 fun Navigation() {
+    val contactoEditado = remember{ mutableIntStateOf(0) }
     val contactos = remember {
         mutableStateListOf(
             Contact("Pepe Pérez", "123"),
@@ -65,6 +71,12 @@ fun Navigation() {
         }
         composable("agregar-contacto") {
             AddContactScreen(navController, contactos)
+        }
+        composable("editar-contacto") {
+            EditContactScreen(navController, contactos, contactoEditado)
+        }
+        composable("editando-contacto") {
+            EditandoContactScreen(navController, contactos, contactoEditado.intValue)
         }
         composable("buscar-contacto") {
             SearchContactScreen(navController, contactos)
@@ -101,6 +113,12 @@ fun MainMenu(navController: NavHostController) {
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Buscar contacto")
+        }
+        Button(
+            onClick = { navController.navigate("editar-contacto") },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Editar contacto")
         }
         Button(
             onClick = { navController.navigate("eliminar-contacto") },
@@ -275,6 +293,59 @@ fun DeleteContactScreen(navController: NavHostController, contactos: MutableList
 }
 
 @Composable
+fun EditContactScreen(navController: NavHostController, contactos: MutableList<Contact>, index: MutableIntState) {
+    var consulta by remember { mutableStateOf("") }
+    val contactosFiltrados = remember(consulta, contactos) {
+        if (consulta.isBlank()) {
+            contactos
+        } else contactos.filter {
+            it.name.contains(consulta, ignoreCase = true)
+        }
+    }
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        OutlinedTextField(
+            value = consulta,
+            onValueChange = { consulta = it },
+            label = { Text("Buscar contacto") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        if (contactosFiltrados.isEmpty()) {
+            Text("No se encontraron contactos.")
+        } else {
+            contactosFiltrados.forEach { contact ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(text = contact.name + " " + contact.phone)
+                    Button(
+                        onClick = {
+                            index.intValue = contactos.indexOf(contact)
+                            navController.navigate("editando-contacto") },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Text("Editar")
+                    }
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = { navController.popBackStack() }) {
+            Text("Volver")
+        }
+    }
+}
+
+@Composable
 fun AcercaDe(navController: NavHostController) {
 
     Column(
@@ -285,7 +356,7 @@ fun AcercaDe(navController: NavHostController) {
             .padding(16.dp)
     ) {
         Text(
-            text = "Hecho por Starbucks.net"
+            text = "Hecho por Alejandro Vivas Lopez"
         )
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = { navController.popBackStack() }) {
@@ -308,6 +379,46 @@ fun ShowDeleteItem(contact: Contact, onDelete: (Contact) -> Unit) {
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
         ) {
             Text("Eliminar")
+        }
+    }
+}
+
+@Composable
+fun EditandoContactScreen(navController: NavHostController,contactos: MutableList<Contact>, index: Int) {
+    var nombre by remember { mutableStateOf(contactos[index].name) }
+    var telefono by remember { mutableStateOf(contactos[index].phone) }
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Editar contacto",
+            style = MaterialTheme.typography.headlineMedium
+        )
+        OutlinedTextField(
+            value = nombre,
+            onValueChange = { nombre = it },
+            label = { Text("Nombre") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
+            value = telefono,
+            onValueChange = { telefono = it },
+            label = { Text("Teléfono") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Button(onClick = {
+            val contacto = Contact(nombre, telefono)
+            contactos[index] = contacto
+        }) {
+            Text("Guardar contacto")
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+        Button(onClick = { navController.popBackStack() }) {
+            Text("Volver")
         }
     }
 }
